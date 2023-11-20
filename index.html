@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #container {
+            width: 80%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+            max-height: 300px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #messages li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #form {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #ddd;
+        }
+
+        #form input {
+            flex: 1;
+            margin-right: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #form button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #nickname-container {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        #nickname-container input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #nickname-container button {
+            width: 100%;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <ul id="messages"></ul>
+        <form id="form" action="">
+            <input id="m" autocomplete="off" placeholder="Digite sua mensagem..." />
+            <button>Enviar</button>
+        </form>
+    </div>
+    <div id="nickname-container">
+        <input id="nickname-input" autocomplete="off" placeholder="Seu apelido..." />
+        <button id="nickname-button">Entrar no Chat</button>
+    </div>
+
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        const messagesContainer = $('#messages');
+        const socket = io();
+        let nicknameEntered = false; // Flag para verificar se o apelido foi inserido
+        let nickname; // Variável para armazenar o apelido
+
+        const maxMessages = 5; // Defina o número máximo de mensagens a serem exibidas
+
+        function appendMessage(data) {
+            const message = `${data.nickname}: ${data.message} - ${data.time}`;
+            
+            // Remova mensagens mais antigas se exceder o limite
+            if (messagesContainer.children().length >= maxMessages) {
+                messagesContainer.children().first().remove();
+            }
+
+            messagesContainer.append($('<li>').text(message));
+        }
+
+        $(document).ready(function () {
+            // Exibir o modal quando a página carregar
+            $('#nickname-container').show();
+            
+            // Carregar mensagens antigas ao abrir a página
+            socket.on('load more', function (data) {
+                data.forEach((messageData) => {
+                    appendMessage(messageData);
+                });
+            });
+
+            // Enviar mensagem
+            $('#form').submit(function (event) {
+                event.preventDefault(); 
+
+                if (nicknameEntered) {
+                    const message = $('#m').val();
+                    socket.emit('chat message', { nickname: nickname, message: message });
+                    $('#m').val('');
+                }
+                return false;
+            });
+
+            // Entrar no chat com apelido
+            $('#nickname-button').click(function () {
+                nickname = $('#nickname-input').val();
+                if (nickname) {
+                    nicknameEntered = true;
+                    $('#nickname-container').hide();
+                }
+            });
+    
+            // Receber mensagem
+            socket.on('chat message', function (data) {
+                if (nicknameEntered) {
+                    appendMessage(data);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
